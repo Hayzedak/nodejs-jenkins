@@ -1,13 +1,13 @@
 FROM node:alpine
 
-WORKDIR /nodejs-docker-aws-ecs
-
-COPY package.json .
-
-RUN npm install
+WORKDIR /app
 
 COPY . .
 
+COPY package*.json ./
+
+RUN npm install
+
 EXPOSE 3000
 
-CMD [ "node", "app.js" ]
+CMD [ "npm" ,"start" ]

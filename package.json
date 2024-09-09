@@ -1,34 +1,28 @@
 {
-  "name": "nodejs-ssl-server",
+  "name": "nodejs-jenkins",
   "version": "1.0.0",
-  "description": "Show you how to deploy nodejs server on AWS EC2 Ubuntu server with Free SSL and Nginx",
+  "description": "A Node.js application demonstrating CI/CD with Jenkins and deployment to AWS",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/kenneth-stack/nodejs-ssl-server.git"
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint ."
   },
   "keywords": [
     "nodejs",
-    "AWS",
-    "EC@",
-    "instanace",
-    "Free",
-    "SSL",
-    "Nginx",
-    "Reverse",
-    "Proxy",
-    "Expressjs"
+    "jenkins",
+    "aws",
+    "cicd",
+    "docker"
   ],
-  "author": "Scale-Up SaaS",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/kenneth-stack/nodejs-ssl-server/issues"
-  },
-  "homepage": "https://github.com/kenneth-stack/nodejs-ssl-server#readme",
+  "author": "Hayzedak Akintolaazeez@gmail.com",
+  "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.40.0",
+    "nodemon": "^2.0.22"
   }
 }
