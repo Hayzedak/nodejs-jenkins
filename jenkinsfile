@@ -1,0 +1,86 @@
+pipeline {
+    agent any
+    
+    environment {
+        AWS_SECRETS_NAME = credentials('aws-secrets-name')
+        AWS_REGION = credentials('aws-region')
+        GITHUB_REPO = 'https://github.com/Hayzedak/nodejs-jenkins.git'
+        DOCKER_IMAGE_NAME = credentials('docker-image-name')
+    }
+
+    stages {
+        stage('Fetch Secrets') {
+            steps {
+                script {
+                    def result = sh(script: """
+                        aws secretsmanager get-secret-value --secret-id "${AWS_SECRETS_NAME}" --region "${AWS_REGION}" --query SecretString --output text
+                    """, returnStdout: true).trim()
+                    
+                    def secretsMap = new groovy.json.JsonSlurper().parseText(result)
+                    
+                    env.DOCKERHUB_USERNAME = secretsMap.DOCKERHUB_USERNAME
+                    env.DOCKERHUB_PASSWORD = secretsMap.DOCKERHUB_PASSWORD
+                    env.EC2_SSH_PRIVATE_KEY = secretsMap.EC2_SSH_PRIVATE_KEY
+                    env.EC2_USER = secretsMap.EC2_USER
+                    env.EC2_HOST = secretsMap.EC2_HOST
+                    
+                    echo "Fetched secrets successfully"
+                }
+            }
+        }
+        
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: "${GITHUB_REPO}"
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("${env.DOCKERHUB_USERNAME}/${DOCKER_IMAGE_NAME}")
+                }
+            }
+        }
+        
+        stage('Push to DockerHub') {
+            steps {
+                script {
+                    sh """
+                        echo ${env.DOCKERHUB_PASSWORD} | docker login -u ${env.DOCKERHUB_USERNAME} --password-stdin
+                        docker push ${env.DOCKERHUB_USERNAME}/${DOCKER_IMAGE_NAME}
+                    """
+                }
+            }
+        }
+        
+        stage('Deploy to EC2') {
+            steps {
+                script {
+                    // Write the SSH key to a temporary file
+                    writeFile file: 'temp_ssh_key', text: env.EC2_SSH_PRIVATE_KEY.replace("\\n", "\n")
+                    sh 'chmod 600 temp_ssh_key'
+                    
+                    // Use the SSH key to connect to EC2 and run docker commands
+                    sh """
+                        ssh -i temp_ssh_key -o StrictHostKeyChecking=no ${env.EC2_USER}@${env.EC2_HOST} '
+                            docker pull ${env.DOCKERHUB_USERNAME}/${DOCKER_IMAGE_NAME}
+                            docker stop nodejs-app || true
+                            docker rm nodejs-app || true
+                            docker run -d --name nodejs-app -p 80:3000 ${env.DOCKERHUB_USERNAME}/${DOCKER_IMAGE_NAME}
+                        '
+                    """
+                    
+                    // Remove the temporary SSH key file
+                    sh 'rm temp_ssh_key'
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            sh 'docker logout'
+        }
+    }
+}
